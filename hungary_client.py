@@ -1,4 +1,5 @@
 import socket
+import copy
 
 UP, LEFT, FRONT, RIGHT, BACK, DOWN = range(6)
 dic = {'U': UP, 'D':DOWN, 'L':LEFT, 'F':FRONT, 'R':RIGHT, 'B':BACK}
@@ -6,11 +7,11 @@ dic = {'U': UP, 'D':DOWN, 'L':LEFT, 'F':FRONT, 'R':RIGHT, 'B':BACK}
 class Cube:
     def __init__(self, cube):
         self.cube = []
-        for i in range(6):
-            self.cube.append([list(cube[i*9:i*9+9])[x:x+3] for x in range(0, 9, 3)])
-    def rotate_opp(self, side):
-        for i in range(3):
-            self.rotate(side)
+        if isinstance(cube, list):
+            self.cube = copy.deepcopy(cube)
+        else:
+            for i in range(6):
+                self.cube.append([list(cube[i*9:i*9+9])[x:x+3] for x in range(0, 9, 3)])
     def is_solved(self):
         for i in self.cube:
             if i[0] != i[1] or i[1] != i[2]:
@@ -29,16 +30,15 @@ class Cube:
             self.cube[FRONT][0], self.cube[LEFT][0], self.cube[BACK][0], self.cube[RIGHT][0] = self.cube[RIGHT][0], self.cube[FRONT][0], self.cube[LEFT][0], self.cube[BACK][0]
         elif side == LEFT:
             sides = list()
-            sides.append([self.cube[UP][i][0] for i in range(3)])
-            sides.append([self.cube[FRONT][i][0] for i in range(3)])
-            sides.append([self.cube[DOWN][i][0] for i in range(3)])
+            for i in (UP, FRONT, DOWN):
+                sides.append([self.cube[i][j][0] for j in range(3)])
             sides.append([self.cube[BACK][2-i][2] for i in range(3)])
             for i in range(3):
                 self.cube[FRONT][i][0] = sides[0][i]
             for i in range(3):
                 self.cube[DOWN][i][0] = sides[1][i]
             for i in range(3):
-                self.cube[BACK][i][2] = sides[2][i]
+                self.cube[BACK][2-i][2] = sides[2][i]
             for i in range(3):
                 self.cube[UP][i][0] = sides[3][i]
         elif side == FRONT:
@@ -52,7 +52,7 @@ class Cube:
             self.cube[DOWN][0] = sides[1][::-1]
             for i in range(3):
                 self.cube[LEFT][i][2] = sides[2][i]
-            self.cube[UP][2] = sides[3]
+            self.cube[UP][2] = sides[3][::-1]
         elif side == RIGHT:
             sides = list()
             sides.append([self.cube[UP][2-i][2] for i in range(3)])
@@ -74,7 +74,7 @@ class Cube:
             sides.append(self.cube[DOWN][2][::-1])
             sides.append([self.cube[RIGHT][i][2] for i in range(3)])
             for i in range(3):
-                self.cube[LEFT][i][0] = sides[0][i]
+                self.cube[LEFT][2-i][0] = sides[0][i]
             self.cube[DOWN][2] = sides[1]
             for i in range(3):
                 self.cube[RIGHT][i][2] = sides[2][i]
@@ -126,32 +126,23 @@ def main():
     
     while 'Wrong!' not in answer and 'MUCH' not in answer:
         data = get_startup_info(server_socket)
-        
-        # This is how you should talk with the server.
-        # The data is printed to the screen and the user needs to input the answer manualy.
-        # Feel free to use the manual version or implement your own.
-        cube = Cube(data[data.index('Shuffled')+10:data.index('Options')-1])
-        cube.print()
-        tmp_cube = cube
+        try:
+            cube = Cube(data[data.index('Shuf')+10:data.index('Option')-1])
+        except:
+            continue
+        #cube.print()
+        tmp_cube = Cube(cube.cube)
         data = data[data.index('Options') + 9 : data.index('Send the correct line') - 2]
         data_list = [i[i.index(' ')+1:] for i in data.split('\n')]
+        line_number = 0
         curr = ''
         for i in data_list:
-            for j in i:
-                if j == "'":
-                    tmp_cube.rotate(dic[curr])
-                    tmp_cube.rotate(dic[curr])
-                else:
-                    tmp_cube.rotate(dic[j])
-                curr = j
+            tmp_cube.solve(i)
             if tmp_cube.is_solved():
-                tmp_cube.print()
-                print(data_list.index(i), i)
                 line_number = str(data_list.index(i) + 1).encode()
-            tmp_cube.print()
-            tmp_cube = cube
-        #
-        line_number = b'1'
+            tmp_cube = Cube(cube.cube)
+        if line_number == 0:
+            return 1
 
         server_socket.send(line_number)
 
@@ -160,21 +151,4 @@ def main():
 
 
 if __name__ == '__main__':
-    #main()
-    #c = Cube('y'*9+'r'*9+'g'*9+'o'*9+'b'*9+'w'*9)
-    #c.print()
-    c = Cube('wowgybwyogygybyoggrowbrgywrborwggybrbwororbwborgowryby')
-    c.print()
-    s = "L', F, B2, R', B, R', L, B, D', F', U, B2, U, F2, D', R2, L2, U, F2, D'".replace(", ","")
-    update = ''
-    tmp = ''
-    for i in s:
-        if i == ',' or i == ' ':
-            continue
-        if i == '2':
-            update += tmp
-            continue
-        update += i
-        tmp = i
-    c.solve(update)
-    c.print()
+    main()
