@@ -126,10 +126,7 @@ def main():
     
     while 'Wrong!' not in answer and 'MUCH' not in answer:
         data = get_startup_info(server_socket)
-        try:
-            cube = Cube(data[data.index('Shuf')+10:data.index('Option')-1])
-        except:
-            continue
+        cube = Cube(data[data.index('Shuf')+10:data.index('Option')-1])
         #cube.print()
         tmp_cube = Cube(cube.cube)
         data = data[data.index('Options') + 9 : data.index('Send the correct line') - 2]
@@ -151,4 +148,10 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    while True:
+        try:
+            main()
+        except:
+            continue
+        else:
+            exit(0)
